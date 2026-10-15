@@ -21,7 +21,7 @@ sector_half_angle 默认为 40 度，表示左右每个采样扇区各向两侧�
 image 是灰度数组；mask 是阈值产生的二值图；contours 是暗区域轮廓；radii 是候选半径；angles 是采样角度；valid 标记在图像内的有效点；contrast 是候选圆周外侧与内侧的平均灰度差；best_score 和 best_circle 用于保留当前最好的搜索结果。
 怎么运行和查看结果
 在终端进入项目文件夹。首次运行前安装依赖；已经装好 NumPy 和 OpenCV 时可跳过安装。
-cd "/Users/haoyun/Desktop/5293/group project"
+
 python3 -m pip install -r requirements.txt
 python3 IrisLocalization.py
 默认会在脚本旁的 CASIA Iris Image Database (version 1.0) 文件夹中递归寻找 BMP 图像，并处理按路径排序的第一张，因此当前两层嵌套的数据目录可以直接使用。需要处理其他图像时，运行 python3 IrisLocalization.py --image "图像的完整路径"；也可以用 --data-dir 指定数据目录，用 --output-dir 指定输出目录。
