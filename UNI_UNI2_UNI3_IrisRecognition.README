@@ -1,0 +1,64 @@
+Iris Recognition
+
+1. Running the program
+
+Requirements: Python 3.10 or later, NumPy, OpenCV, and Matplotlib.
+Keep the seven Python scripts in the same directory and extract the provided CASIA-IrisV1 dataset into the folder "CASIA Iris Image Database (version 1.0)" beside them. Nested dataset folders are supported.
+
+Run these commands from the script directory:
+  python3 -m pip install -r requirements.txt
+  python3 IrisRecognition.py
+
+To specify a different dataset directory:
+  python3 IrisRecognition.py --data-dir "/path/to/dataset"
+
+Results are saved in outputs/matching and outputs/evaluation. The first run computes the image features; subsequent runs reuse the cache when the data and preprocessing settings match. Use --rebuild-cache to recompute the features.
+
+2. Design
+
+The implementation follows the preprocessing, texture feature extraction, and matching framework of Ma et al. (2003). Session 1 contains 324 training images, and session 2 contains 432 test images from the same 108 eye classes. The mean, projection, and class templates are computed using training images only.
+
+IrisRecognition.py runs the complete pipeline.
+
+IrisLocalization.py detects the pupil using dark contours and searches for the outer iris boundary using brightness differences in the left and right sectors. This uses the alternative localization method permitted by the assignment.
+
+IrisNormalization.py maps the iris region to a 64 x 512 rectangular image using interpolation between the pupil and outer iris boundaries.
+
+ImageEnhancement.py estimates illumination from 16 x 16 block means, subtracts the interpolated background, and applies histogram equalization in 32 x 32 blocks. The signed residual is mapped to uint8 before equalization.
+
+FeatureExtraction.py uses the first 48 rows and two spatial filters with (sigma_x, sigma_y) values of (3, 1.5) and (4.5, 1.5). Each 8 x 8 block contributes the mean absolute filter response and its mean absolute deviation, producing 1,536 features. Since the paper does not specify numerical frequencies or discrete kernel support, both frequencies are set to 0.1 cycles/pixel and the kernels extend to three standard deviations. Angular padding is periodic and radial padding uses reflection.
+
+IrisMatching.py applies PCA followed by regularized Fisher linear discriminant analysis. PCA retains 216 dimensions, and Fisher retains 107 dimensions, the maximum C-1 for 108 classes. The regularization coefficient is 0.01. Training images use seven normalization angles: -9, -6, -3, 0, 3, 6, and 9 degrees. For each eye and angle, the three training features are averaged to form a class template. Matching takes the minimum distance over the seven templates and selects the nearest class using L1, squared L2, or cosine distance.
+
+PerformanceEvaluation.py generates the identification results, dimension curves, and verification ROC. Original-feature results use raw training class means; Fisher results use centered and projected features. Verification accepts a claimed identity when its class distance is no greater than the threshold. There are 432 genuine and 46,224 impostor comparisons. FMR is the fraction of accepted impostor comparisons, and FNMR is the fraction of rejected genuine comparisons.
+
+3. Results
+
+Identification on the 432 test images:
+  Metric    Original features (1536)    Fisher features (107)
+  L1        97.45% (421/432)            96.06% (415/432)
+  L2        96.53% (417/432)            95.83% (414/432)
+  Cosine    96.30% (416/432)            96.30% (416/432)
+
+All three Fisher recognition rates exceed 80%.
+
+The main experimental outputs in outputs/evaluation are:
+  Table3_identification.csv: original and reduced feature recognition rates.
+  Fig10_dimensions.png/pdf: recognition rate versus Fisher dimensions 1-107.
+  Table4_verification.csv: thresholds, FMR, and FNMR.
+  Fig11_ROC.png/pdf: verification ROC and low-FMR detail.
+
+Table 4 reports empirical operating points at target FMRs of 1%, 0.1%, 0.01%, and 0%. Thresholds describe the test ROC rather than independently calibrated thresholds. Figure filenames follow the assignment submission section; the paper labels its ROC as Fig. 13.
+
+4. Limitations and improvements
+
+Circular boundaries and fixed radius ranges may produce localization errors. The valid mask only checks whether sampled coordinates lie inside the image; it does not remove eyelids, eyelashes, or reflections. Enhancement may amplify noise, and block equalization can introduce discontinuities. Improved boundary detection, occlusion masking, and image-quality checks could improve performance.
+
+Filter frequency, kernel support, residual quantization, and Fisher regularization are implementation choices. These parameters could be compared using validation within the training session. Test results should remain separate from parameter selection. The minimum nonzero empirical FMR is approximately 0.00216%, so zero observed false matches do not establish zero error probability.
+
+5. References
+
+Ma L., Tan T., Wang Y., Zhang D. Personal Identification Based on Iris Texture Analysis. IEEE Transactions on Pattern Analysis and Machine Intelligence, 25(12), 1519-1533, 2003.
+
+CASIA-IrisV1 and Biometrics Ideal Test: http://biometrics.idealtest.org/
+Portions of this work use CASIA-IrisV1 collected by CASIA's Institute of Automation. We acknowledge Prof. Tieniu Tan's research group at CBSR, NLPR, CASIA.
